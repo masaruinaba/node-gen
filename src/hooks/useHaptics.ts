@@ -11,6 +11,9 @@ export function useHaptics() {
     if (instance) return;
     import('web-haptics').then(mod => {
       instance = new (mod as any).WebHaptics();
+      // iOSのhidden switchをDOMに事前追加しておく
+      // (trigger内部のensureDOM()を呼ぶため。ジェスチャー外なのでハプティクスは鳴らない)
+      instance.trigger([{ duration: 0 }]).catch(() => {});
     }).catch(() => {});
   }, []);
 
