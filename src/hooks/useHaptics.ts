@@ -28,14 +28,18 @@ function triggerHaptic(input?: TriggerInput) {
     return;
   }
 
-  // iOS Safari 17.4+: create → toggle → remove
-  // display:none な要素ではハプティクスが発火しないため毎回生成する
+  // iOS Safari 17.4+: create → toggle → remove (ios-haptics と同じ方式)
+  // label で包んで label.click() する必要がある（input.click() では発火しない）
+  const label = document.createElement('label');
+  label.ariaHidden = 'true';
+  label.style.display = 'none';
   const el = document.createElement('input');
   el.type = 'checkbox';
   el.setAttribute('switch', '');
-  document.body.appendChild(el);
-  el.click();
-  document.body.removeChild(el);
+  label.appendChild(el);
+  document.head.appendChild(label);
+  label.click();
+  document.head.removeChild(label);
 }
 
 export function useHaptics() {
