@@ -5,6 +5,7 @@ import StylePad from './StylePad';
 import BackgroundGrid from './BackgroundGrid';
 import { useAudioReactive, NUM_BANDS } from '@/hooks/useAudioReactive';
 import { PALETTES } from '@/lib/nodeTypes';
+import { useHaptics } from '@/hooks/useHaptics';
 
 const PAD_SIZE = 130;
 const HANDLE_H = 0;
@@ -143,6 +144,8 @@ export default function AudioCanvas() {
   const [spaceDown, setSpaceDown] = useState(false);
 
   const { bands, isActive, connectMic, connectUrl, stop } = useAudioReactive();
+  const haptic = useHaptics();
+  const lastDragHapticRef = useRef(0);
   const tickRef = useRef(0);
   const threadSvgRef = useRef<SVGSVGElement>(null);
 
@@ -236,11 +239,17 @@ export default function AudioCanvas() {
     const onPtrDown = (e: PointerEvent) => {
       if (!spaceDownRef.current) return;
       panRef.current = { startTx: transformRef.current.x, startTy: transformRef.current.y, startPx: e.clientX, startPy: e.clientY };
+      haptic([20]);
     };
     const onPtrMove = (e: PointerEvent) => {
       if (!panRef.current) return;
       const { startTx, startTy, startPx, startPy } = panRef.current;
       setTransform(t => ({ ...t, x: startTx + e.clientX - startPx, y: startTy + e.clientY - startPy }));
+      const now = Date.now();
+      if (now - lastDragHapticRef.current > 150) {
+        haptic([10]);
+        lastDragHapticRef.current = now;
+      }
     };
     const onPtrUp = () => { panRef.current = null; };
     window.addEventListener('pointerdown', onPtrDown);
@@ -253,7 +262,7 @@ export default function AudioCanvas() {
       window.removeEventListener('pointerup', onPtrUp);
       window.removeEventListener('pointercancel', onPtrUp);
     };
-  }, []);
+  }, [haptic]);
 
   // Card drag + tap detection
   const handleCardPointerDown = useCallback((padId: string) => (e: React.PointerEvent) => {
@@ -262,14 +271,20 @@ export default function AudioCanvas() {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     const pad = padsRef.current.find(p => p.id === padId)!;
     cardDragRef.current = { padId, startCx: pad.cx, startCy: pad.cy, startPx: e.clientX, startPy: e.clientY };
-  }, []);
+    haptic('nudge');
+  }, [haptic]);
 
   const handleCardPointerMove = useCallback((e: React.PointerEvent) => {
     if (!cardDragRef.current) return;
     const { padId, startCx, startCy, startPx, startPy } = cardDragRef.current;
     const scale = transformRef.current.scale;
     setPads(prev => prev.map(p => p.id === padId ? { ...p, cx: startCx + (e.clientX - startPx) / scale, cy: startCy + (e.clientY - startPy) / scale } : p));
-  }, []);
+    const now = Date.now();
+    if (now - lastDragHapticRef.current > 120) {
+      haptic([15]);
+      lastDragHapticRef.current = now;
+    }
+  }, [haptic]);
 
   const handleCardPointerUp = useCallback((e: React.PointerEvent) => {
     if (!cardDragRef.current) return;
@@ -279,6 +294,7 @@ export default function AudioCanvas() {
     const dist = Math.sqrt(dx * dx + dy * dy);
     if (dist < TAP_MAX_PX) {
       // Tap: cycle palette
+      haptic('success');
       setPads(prev => prev.map(p => {
         if (p.id !== padId) return p;
         const idx = PALETTE_CYCLE.indexOf(p.paletteId);
@@ -287,7 +303,7 @@ export default function AudioCanvas() {
       }));
     }
     cardDragRef.current = null;
-  }, []);
+  }, [haptic]);
 
   // Dot override
   const handleDotGrab = useCallback((padId: string) => {
@@ -342,6 +358,7 @@ export default function AudioCanvas() {
       }
     }
 
+    haptic('success');
     setPads(prev => [...prev, {
       id: Math.random().toString(36).slice(2),
       cx: cx - PAD_SIZE / 2,
@@ -351,7 +368,7 @@ export default function AudioCanvas() {
       paletteId: palettes[all.length % palettes.length],
       isManualDot: false, manualTimeoutId: null,
     }]);
-  }, []);
+  }, [haptic]);
 
   // Audio controls
   const handleMicConnect = useCallback(async () => {
