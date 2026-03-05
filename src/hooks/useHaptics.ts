@@ -5,6 +5,7 @@ import { useCallback } from 'react';
 type TriggerInput = string | number | number[];
 
 const VIBRATE_PRESETS: Record<string, number[]> = {
+  light:   [12],
   success: [30, 60, 40],
   nudge:   [80, 80, 50],
   warning: [40, 100, 40],

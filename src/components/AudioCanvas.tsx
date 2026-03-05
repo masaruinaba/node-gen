@@ -301,6 +301,9 @@ export default function AudioCanvas() {
         const next = PALETTE_CYCLE[(idx + 1) % PALETTE_CYCLE.length];
         return { ...p, paletteId: next };
       }));
+    } else {
+      // Drop after drag
+      haptic('nudge');
     }
     cardDragRef.current = null;
   }, [haptic]);
@@ -329,10 +332,11 @@ export default function AudioCanvas() {
   }, []);
 
   const handleReset = useCallback(() => {
+    haptic('nudge');
     setPads(makeInitialPads(window.innerWidth, window.innerHeight));
     setTransform({ x: 0, y: 0, scale: 1 });
     tickRef.current = 0;
-  }, []);
+  }, [haptic]);
 
   const addPad = useCallback(() => {
     const all = padsRef.current;
@@ -372,11 +376,13 @@ export default function AudioCanvas() {
 
   // Audio controls
   const handleMicConnect = useCallback(async () => {
+    haptic('light');
     setError('');
     try { await connectMic(); } catch { setError('Mic access denied'); }
-  }, [connectMic]);
+  }, [connectMic, haptic]);
 
   const handleUrlPlay = useCallback(() => {
+    haptic('light');
     setError('');
     if (!urlInput.trim()) return;
     audioElRef.current = new Audio();
@@ -386,14 +392,15 @@ export default function AudioCanvas() {
     connectUrl(audioElRef.current);
     audioElRef.current.play().catch(() => { setError('Cannot play (CORS or invalid URL)'); stop(); });
     setIsPlaying(true);
-  }, [urlInput, connectUrl, stop]);
+  }, [urlInput, connectUrl, stop, haptic]);
 
   const handleUrlStop = useCallback(() => {
+    haptic('light');
     audioElRef.current?.pause();
     audioElRef.current = null;
     stop();
     setIsPlaying(false);
-  }, [stop]);
+  }, [stop, haptic]);
 
   const padCentersScreen = pads.map(p => ({
     centerX: (p.cx + PAD_SIZE / 2) * transform.scale + transform.x,
@@ -467,7 +474,7 @@ export default function AudioCanvas() {
       <div className="absolute top-5 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2" style={{ zIndex: 40 }}>
         <div className="flex gap-1 rounded-full p-0.5" style={{ background: 'rgba(255,255,255,0.06)' }}>
           {(['mic', 'url'] as SourceTab[]).map(tab => (
-            <button key={tab} onClick={() => setSourceTab(tab)}
+            <button key={tab} onClick={() => { haptic('light'); setSourceTab(tab); }}
               className="rounded-full px-4 py-1 text-[10px] tracking-[0.2em] uppercase transition-colors"
               style={{ background: sourceTab === tab ? 'rgba(255,255,255,0.12)' : 'transparent', color: sourceTab === tab ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)' }}>
               {tab}
@@ -476,7 +483,7 @@ export default function AudioCanvas() {
         </div>
         {sourceTab === 'mic' && (!isActive
           ? <button onClick={handleMicConnect} className="px-5 py-1.5 rounded-full text-[10px] tracking-[0.2em] uppercase" style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>connect mic</button>
-          : <button onClick={stop} className="px-5 py-1.5 rounded-full text-[10px] tracking-[0.2em] uppercase flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }}>
+          : <button onClick={() => { haptic('light'); stop(); }} className="px-5 py-1.5 rounded-full text-[10px] tracking-[0.2em] uppercase flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />stop
             </button>
         )}
