@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'mood wards',
+  title: 'node-gen',
   description: 'Nuance map text rewriting tool',
 };
 
